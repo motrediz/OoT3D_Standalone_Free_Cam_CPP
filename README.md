@@ -1,5 +1,8 @@
 # Personal Notes (old 3ds support)
 
+![GitHub all releases](https://img.shields.io/github/downloads/tristangnl/OoT3D_Standalone_Free_Cam_CPP/total?style=for-the-badge)
+
+
 Thanks to the incredible work of the OoT3D and Nintendo 3DS homebrew community, I was able to create a game patch that enables input support for the Circle Pad Pro, making it compatible with a game that does not originally support this accessory.
 
 I reused code from [Skyfloogle](https://github.com/skyfloogle/red-viper/blob/master/source/3ds/cpp.c) to handle Circle Pad Pro inputs and integrated it into this [patch](https://github.com/Roberto-Nessy/OoT3D_Standalone_Free_Cam). But, I adapted the implementation to allocate the thread stack statically instead of dynamically.
@@ -35,7 +38,7 @@ This project still lacks several features that may be added in the future.
 * Shoutouts to the whole OoT3DR dev team for being cool people and the community for keeping me motivated
 
 # How to Use:
-* Find the patch files inside the "Patch Files" folder in this repository. They're divided by regional version of OoT3D (USA/EUR/JP) and by platform (3DS/Citra), so choose the correct ones.
+* Find the patch files inside the "[Patch Files](https://github.com/tristangnl/OoT3D_Standalone_Free_Cam_CPP/releases/download/CPP-DPAD-TOUCHSCREEN/Patch.Files.zip)" folder in this repository. They're divided by regional version of OoT3D (USA/EUR/JP) and by platform (3DS/Citra), so choose the correct ones.
 
 ##### 7 versions are available based on 3 features :
 - rightstick : Circle Pad Pro on old 3ds | C-Stick on new 3ds
