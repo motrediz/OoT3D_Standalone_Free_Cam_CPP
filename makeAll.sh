@@ -5,9 +5,10 @@ REGIONS=("EUR" "JP" "USA")
 build() {
     make clean
     echo -e "\033[32mmake -j REGION=$REGION $1\033[0m"
-    make -j REGION=$REGION $1
-    echo -e "\033[32mMoving to $2\n\033[0m"
-    mv code.ips "$2"
+    make -j REGION=$REGION "$1" && {
+        echo -e "\033[32mMoving to $2\n\033[0m"
+        mv code.ips "$2"
+    }
 }
 
 createPatches() {
