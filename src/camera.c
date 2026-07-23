@@ -19,57 +19,7 @@ bool new3dsFlag;//extern variable -> see common.h
 static bool cppActivateFlag = true;
 #endif
 
-void before_GlobalContext_Update(GlobalContext* globalCtx) {
-    static u8 init = 0;
-    if (!init) {
-        srvInit();
-        #ifdef RSTICK
-        APT_CheckNew3DS(&new3dsFlag);
-        if (new3dsFlag) irrstInit();
-        else cppInit();
-        #endif
-        gGlobalContext = globalCtx;
-        Draw_SetupFramebuffer();
-        init = 1;
-    }
-    Input_Update();
-
-    u32 held = rInputCtx.cur.val, pressed = rInputCtx.pressed.val;
-    if ((held & BUTTON_L1) && (held & BUTTON_R1)) {
-        if ((pressed & BUTTON_UP) && spdOpt < 6) {
-            spdOpt++;
-            alertSpd = 30;
-        }
-        if ((pressed & BUTTON_DOWN) && spdOpt) {
-            spdOpt--;
-            alertSpd = 30;
-        }
-        speed = speeds[spdOpt];
-
-        if (pressed & BUTTON_LEFT) {
-            controls--;
-            alertCtr = 30;
-        }
-        if (pressed & BUTTON_RIGHT) {
-            controls++;
-            alertCtr = 30;
-        }
-        controls &= 3;
-    }
-    #ifdef RSTICK
-    // Allows Old 3DS users to disable the CPP, as it may cause interference when unplugged.
-    if (!new3dsFlag){
-        if ((held & BUTTON_L1) && (held & BUTTON_R1) && (pressed & BUTTON_SELECT)) {
-            if(cppActivateFlag) cppExit();
-            else cppInit();
-            cppActivateFlag= !cppActivateFlag;
-            alertCpp = 30;
-        }
-    }
-    #endif
-}
-
-void after_GlobalContext_Update(GlobalContext* globalCtx) {
+void displayHUD(void) {
     if (alertCtr) {
         alertCtr--;
         switch (controls) {
@@ -120,6 +70,62 @@ void after_GlobalContext_Update(GlobalContext* globalCtx) {
         Draw_DrawFormattedStringTop(10, alertSpd ? (alertCtr ? 30 : 20) : (alertCtr ? 20 : 10), COLOR_WHITE, cppActivateFlag ? "CPP Enabled" : "CPP Disabled");
     }
     #endif
+}
+
+void before_GlobalContext_Update(GlobalContext* globalCtx) {
+    static u8 init = 0;
+    if (!init) {
+        srvInit();
+        #ifdef RSTICK
+        APT_CheckNew3DS(&new3dsFlag);
+        if (new3dsFlag) irrstInit();
+        else cppInit();
+        #endif
+        gGlobalContext = globalCtx;
+        Draw_SetupFramebuffer();
+        init = 1;
+    }
+    Input_Update();
+
+    u32 held = rInputCtx.cur.val, pressed = rInputCtx.pressed.val;
+    if ((held & BUTTON_L1) && (held & BUTTON_R1)) {
+        if ((pressed & BUTTON_UP) && spdOpt < 6) {
+            spdOpt++;
+            alertSpd = 30;
+        }
+        if ((pressed & BUTTON_DOWN) && spdOpt) {
+            spdOpt--;
+            alertSpd = 30;
+        }
+        speed = speeds[spdOpt];
+
+        if (pressed & BUTTON_LEFT) {
+            controls--;
+            alertCtr = 30;
+        }
+        if (pressed & BUTTON_RIGHT) {
+            controls++;
+            alertCtr = 30;
+        }
+        controls &= 3;
+    }
+    #ifdef RSTICK
+    // Allows Old 3DS users to disable the CPP, as it may cause interference when unplugged.
+    if (!new3dsFlag){
+        if ((held & BUTTON_L1) && (held & BUTTON_R1) && (pressed & BUTTON_SELECT)) {
+            if(cppActivateFlag) cppExit();
+            else cppInit();
+            cppActivateFlag= !cppActivateFlag;
+            alertCpp = 30;
+        }
+    }
+    #endif
+
+    displayHUD();
+}
+
+void after_GlobalContext_Update(GlobalContext* globalCtx) {
+    displayHUD();
 }
 
 f32 sins(u16 angle) {
@@ -425,6 +431,7 @@ void Camera_FreeCamUpdate(Vec3s* out, Camera* camera) {
             if (newSetting != camera->setting) {
                 camera->prevSetting = camera->setting;
                 camera->setting     = newSetting;
+                camera->mode        = 0; // TODO: calculate mode properly, using default for now as applies to all settings
             }
         }
     }
