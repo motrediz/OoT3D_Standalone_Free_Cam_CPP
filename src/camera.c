@@ -120,8 +120,6 @@ void before_GlobalContext_Update(GlobalContext* globalCtx) {
         }
     }
     #endif
-
-    displayHUD();
 }
 
 void after_GlobalContext_Update(GlobalContext* globalCtx) {
