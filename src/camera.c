@@ -93,7 +93,7 @@ void Camera_ApplyControlAction(ControlAction action) {
             alertCtr = 30;
             break;
         #ifdef RSTICK
-            case CONTROL_ACTION_CPP_DISABLE:
+        case CONTROL_ACTION_CPP_DISABLE:
             // Allows Old 3DS users to disable the CPP, as it may cause interference when unplugged.
             if (!new3dsFlag){
                 if(cppActivateFlag) cppExit();

@@ -30,23 +30,6 @@ void before_GlobalContext_Update(GlobalContext* globalCtx) {
     Free_Camera_Init();
     Input_Update();
     InputRemap_Update(globalCtx);
-    const ControlAction action = Controls_Resolve(rInputCtx.cur.val,rInputCtx.pressed.val);
-    switch (action) {
-        case CONTROL_ACTION_CAMERA_SENSITIVITY_UP:
-        case CONTROL_ACTION_CAMERA_SENSITIVITY_DOWN:
-        case CONTROL_ACTION_CAMERA_INVERT_PREVIOUS:
-        case CONTROL_ACTION_CAMERA_INVERT_NEXT:
-        #ifdef RSTICK
-        case CONTROL_ACTION_CPP_DISABLE:
-        #endif
-            Camera_ApplyControlAction(action);
-            break;
-        default:
-            break;
-            //temp
-    }
-
-    //refaire ici
 }
 
 void after_GlobalContext_Update(GlobalContext* globalCtx) {
