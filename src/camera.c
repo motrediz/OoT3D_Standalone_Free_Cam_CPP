@@ -270,8 +270,10 @@ u8 Camera_FreeCamEnabled(Camera* camera) {
     #endif
 
     #ifdef DPAD
-    if (rInputCtx.cur.d_left || rInputCtx.cur.d_right || rInputCtx.cur.d_up || rInputCtx.cur.d_down) {
-        freeCamEnabled = 1;
+    if (!(rInputCtx.cur.r && rInputCtx.cur.l)) {
+        if (rInputCtx.cur.d_left || rInputCtx.cur.d_right || rInputCtx.cur.d_up || rInputCtx.cur.d_down) {
+            freeCamEnabled = 1;
+        }
     }
     #endif
 
@@ -332,10 +334,12 @@ void Camera_FreeCamUpdate(Vec3s* out, Camera* camera) {
         at.y = eye.pos.y += ((gSaveContext.linkAge) ? 38 : 50) * ((camera->player->stateFlags1 & 0x00002000) ? 0.5 : 1);
         
         #ifdef DPAD
-        if (rInputCtx.cur.d_left) yaw -= -150 * speed * (((controls & 1) ^ gSaveContext.masterQuestFlag) ? -1 : 1);
-        if (rInputCtx.cur.d_right) yaw -= 150 * speed * (((controls & 1) ^ gSaveContext.masterQuestFlag) ? -1 : 1);
-        if (rInputCtx.cur.d_up) pitch = Clamp(pitch + 100 * speed * ((controls & 2) ? -1 : 1));
-        if (rInputCtx.cur.d_down) pitch = Clamp(pitch + (-100) * speed * ((controls & 2) ? -1 : 1));
+        if (!(rInputCtx.cur.r && rInputCtx.cur.l)) {
+            if (rInputCtx.cur.d_left) yaw -= -150 * speed * (((controls & 1) ^ gSaveContext.masterQuestFlag) ? -1 : 1);
+            if (rInputCtx.cur.d_right) yaw -= 150 * speed * (((controls & 1) ^ gSaveContext.masterQuestFlag) ? -1 : 1);
+            if (rInputCtx.cur.d_up) pitch = Clamp(pitch + 100 * speed * ((controls & 2) ? -1 : 1));
+            if (rInputCtx.cur.d_down) pitch = Clamp(pitch + (-100) * speed * ((controls & 2) ? -1 : 1));
+        }
         #endif
         #ifdef TOUCHSCREEN
         static float touchVelX = 0.0f;
