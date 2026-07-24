@@ -29,6 +29,8 @@ static void Free_Camera_Init(void) {
 void before_GlobalContext_Update(GlobalContext* globalCtx) {
     Free_Camera_Init();
     Input_Update();
+
+    // Inject shortcuts immediately before OoT3D samples the current input.
     InputRemap_Update(globalCtx);
 }
 

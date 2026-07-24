@@ -18,6 +18,7 @@ void Input_Update(void) {
     //extern variable -> see common.h
     if(new3dsFlag){
         irrstScanInput();
+        rInputCtx.cur.val |= irrstKeysHeld();
         irrstCstickRead(&(rInputCtx.cStick));
     }
     else {
@@ -32,7 +33,6 @@ void Input_Update(void) {
     rInputCtx.touchY       = real_hid.touch.touches[real_hid.touch.index].touch.y;
     rInputCtx.touchPressed = real_hid.touch.touches[real_hid.touch.index].updated && !rInputCtx.touchHeld;
     rInputCtx.touchHeld    = real_hid.touch.touches[real_hid.touch.index].updated;
-
 }
 
 u32 buttonCheck(u32 key) {

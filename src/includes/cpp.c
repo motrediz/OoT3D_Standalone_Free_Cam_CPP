@@ -408,9 +408,9 @@ static void iruserThreadFunc(void* param) {
             cPos.dy = (s16)((float)(s16)(input_response.pad_y - calibration_data.y_offset) * calibration_data.y_scale) / 8;
             
             u32 keys = 0;
-            if (!input_response.r_up) keys |= BUTTON_R1;//KEY_R;
-            if (!input_response.zl_up) keys |= BUTTON_L1;//KEY_ZL;
-            if (!input_response.zr_up) keys |= BUTTON_R1;//KEY_ZR;
+            if (!input_response.r_up) keys |= BUTTON_R1;
+            if (!input_response.zl_up) keys |= BUTTON_ZL;
+            if (!input_response.zr_up) keys |= BUTTON_ZR;
             // Custom addition, not present in the original file from Red Viper
             kDown = keys & ~kHeld;
             kUp   = ~keys & kHeld;
