@@ -10,24 +10,32 @@
 typedef union {
     uint32_t val;
     struct {
-        uint32_t a : 1;        // 1
-        uint32_t b : 1;        // 2
-        uint32_t sel : 1;      // 3
-        uint32_t strt : 1;     // 4
-        uint32_t d_right : 1;  // 5
-        uint32_t d_left : 1;   // 6
-        uint32_t d_up : 1;     // 7
-        uint32_t d_down : 1;   // 8
-        uint32_t r : 1;        // 9
-        uint32_t l : 1;        // 10
-        uint32_t x : 1;        // 11
-        uint32_t y : 1;        // 12
-        uint32_t gpio : 2;     // 14
-        uint32_t padding : 14; // 28
-        uint32_t c_right : 1;  // 29
-        uint32_t c_left : 1;   // 30
-        uint32_t c_up : 1;     // 31
-        uint32_t c_down : 1;   // 32
+        uint32_t a : 1;            // 1
+        uint32_t b : 1;            // 2
+        uint32_t sel : 1;          // 3
+        uint32_t strt : 1;         // 4
+        uint32_t d_right : 1;      // 5
+        uint32_t d_left : 1;       // 6
+        uint32_t d_up : 1;         // 7
+        uint32_t d_down : 1;       // 8
+        uint32_t r : 1;            // 9
+        uint32_t l : 1;            // 10
+        uint32_t x : 1;            // 11
+        uint32_t y : 1;            // 12
+        uint32_t gpio : 2;         // 14
+        uint32_t zl : 1;           // 15
+        uint32_t zr : 1;           // 16
+        uint32_t padding1 : 4;     // 20
+        uint32_t touch : 1;        // 21
+        uint32_t padding2 : 3;     // 24
+        uint32_t cstick_right : 1; // 25
+        uint32_t cstick_left : 1;  // 26
+        uint32_t cstick_up : 1;    // 27
+        uint32_t cstick_down : 1;  // 28
+        uint32_t c_right : 1;      // 29
+        uint32_t c_left : 1;       // 30
+        uint32_t c_up : 1;         // 31
+        uint32_t c_down : 1;       // 32
     };
 } btn_t;
 
@@ -111,6 +119,13 @@ typedef struct {
 #define BUTTON_L1 (1 << 9)
 #define BUTTON_X (1 << 10)
 #define BUTTON_Y (1 << 11)
+#define BUTTON_ZL (1 << 14)
+#define BUTTON_ZR (1 << 15)
+#define TOUCH (1 << 20)
+#define CSTICK_RIGHT (1 << 24)
+#define CSTICK_LEFT (1 << 25)
+#define CSTICK_UP (1 << 26)
+#define CSTICK_DOWN (1 << 27)
 #define CPAD_RIGHT (1 << 28)
 #define CPAD_LEFT (1 << 29)
 #define CPAD_UP (1 << 30)

@@ -1,6 +1,6 @@
+#include "camera.h"
 #include "z3D/z3D.h"
 #include "3ds/srv.h"
-#include "3ds/services/irrst.h"
 #include "common.h"
 #include "input.h"
 #include "draw.h"
@@ -12,10 +12,8 @@ static s16 pitch = 0, yaw = 0;
 static f32 dist = 0;
 static u8 spdOpt = 3, speed = 6, controls = 0, alertSpd = 0, alertCtr = 0;
 static u8 speeds[] = { 2, 3, 4, 6, 8, 12, 16 };
-static GlobalContext* gGlobalContext;
 #ifdef RSTICK
 static u8 alertCpp = 0;
-bool new3dsFlag;//extern variable -> see common.h
 static bool cppActivateFlag = true;
 #endif
 
@@ -72,60 +70,43 @@ void displayHUD(void) {
     #endif
 }
 
-void before_GlobalContext_Update(GlobalContext* globalCtx) {
-    static u8 init = 0;
-    if (!init) {
-        srvInit();
-        #ifdef RSTICK
-        APT_CheckNew3DS(&new3dsFlag);
-        if (new3dsFlag) irrstInit();
-        else cppInit();
-        #endif
-        gGlobalContext = globalCtx;
-        Draw_SetupFramebuffer();
-        init = 1;
-    }
-    Input_Update();
-
-    u32 held = rInputCtx.cur.val, pressed = rInputCtx.pressed.val;
-    if ((held & BUTTON_L1) && (held & BUTTON_R1)) {
-        if ((pressed & BUTTON_UP) && spdOpt < 6) {
-            spdOpt++;
+void Camera_ApplyControlAction(ControlAction action) {
+    switch (action) {
+        case CONTROL_ACTION_CAMERA_SENSITIVITY_UP:
+            if (spdOpt < 6) {
+                spdOpt++;
+            }
             alertSpd = 30;
-        }
-        if ((pressed & BUTTON_DOWN) && spdOpt) {
-            spdOpt--;
+            break;
+        case CONTROL_ACTION_CAMERA_SENSITIVITY_DOWN:
+            if (spdOpt) {
+                spdOpt--;
+            }
             alertSpd = 30;
-        }
-        speed = speeds[spdOpt];
-
-        if (pressed & BUTTON_LEFT) {
+            break;
+        case CONTROL_ACTION_CAMERA_INVERT_PREVIOUS:
             controls--;
             alertCtr = 30;
-        }
-        if (pressed & BUTTON_RIGHT) {
+            break;
+        case CONTROL_ACTION_CAMERA_INVERT_NEXT:
             controls++;
             alertCtr = 30;
-        }
-        controls &= 3;
-    }
-    #ifdef RSTICK
-    // Allows Old 3DS users to disable the CPP, as it may cause interference when unplugged.
-    if (!new3dsFlag){
-        if ((held & BUTTON_L1) && (held & BUTTON_R1) && (pressed & BUTTON_SELECT)) {
+            break;
+        #ifdef RSTICK
+        case CONTROL_ACTION_CPP_DISABLE:
+            // Allows Old 3DS users to disable the CPP, as it may cause interference when unplugged.
             if(cppActivateFlag) cppExit();
             else cppInit();
             cppActivateFlag= !cppActivateFlag;
-            alertCpp = 30;
-        }
+            alertCpp = 60;
+            break;
+        #endif
+        default:
+            return;
     }
-    #endif
 
-    displayHUD();
-}
-
-void after_GlobalContext_Update(GlobalContext* globalCtx) {
-    displayHUD();
+    controls &= 3;
+    speed = speeds[spdOpt];
 }
 
 f32 sins(u16 angle) {
@@ -287,8 +268,10 @@ u8 Camera_FreeCamEnabled(Camera* camera) {
     #endif
 
     #ifdef DPAD
-    if (rInputCtx.cur.d_left || rInputCtx.cur.d_right || rInputCtx.cur.d_up || rInputCtx.cur.d_down) {
-        freeCamEnabled = 1;
+    if (!(rInputCtx.cur.r && rInputCtx.cur.l)) {
+        if (rInputCtx.cur.d_left || rInputCtx.cur.d_right || rInputCtx.cur.d_up || rInputCtx.cur.d_down) {
+            freeCamEnabled = 1;
+        }
     }
     #endif
 
@@ -349,10 +332,12 @@ void Camera_FreeCamUpdate(Vec3s* out, Camera* camera) {
         at.y = eye.pos.y += ((gSaveContext.linkAge) ? 38 : 50) * ((camera->player->stateFlags1 & 0x00002000) ? 0.5 : 1);
         
         #ifdef DPAD
-        if (rInputCtx.cur.d_left) yaw -= -150 * speed * (((controls & 1) ^ gSaveContext.masterQuestFlag) ? -1 : 1);
-        if (rInputCtx.cur.d_right) yaw -= 150 * speed * (((controls & 1) ^ gSaveContext.masterQuestFlag) ? -1 : 1);
-        if (rInputCtx.cur.d_up) pitch = Clamp(pitch + 100 * speed * ((controls & 2) ? -1 : 1));
-        if (rInputCtx.cur.d_down) pitch = Clamp(pitch + (-100) * speed * ((controls & 2) ? -1 : 1));
+        if (!(rInputCtx.cur.r && rInputCtx.cur.l)) {
+            if (rInputCtx.cur.d_left) yaw -= -150 * speed * (((controls & 1) ^ gSaveContext.masterQuestFlag) ? -1 : 1);
+            if (rInputCtx.cur.d_right) yaw -= 150 * speed * (((controls & 1) ^ gSaveContext.masterQuestFlag) ? -1 : 1);
+            if (rInputCtx.cur.d_up) pitch = Clamp(pitch + 100 * speed * ((controls & 2) ? -1 : 1));
+            if (rInputCtx.cur.d_down) pitch = Clamp(pitch + (-100) * speed * ((controls & 2) ? -1 : 1));
+        }
         #endif
         #ifdef TOUCHSCREEN
         static float touchVelX = 0.0f;
