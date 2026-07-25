@@ -1,5 +1,5 @@
 #include "controls.h"
-
+#include "common.h"
 #include "hid.h"
 
 ControlAction Controls_Resolve(uint32_t held, uint32_t pressed) {
@@ -20,27 +20,12 @@ ControlAction Controls_Resolve(uint32_t held, uint32_t pressed) {
         }
         #ifdef RSTICK
         // Allows Old 3DS users to disable the CPP, as it may cause interference when unplugged.
-        if (pressed & BUTTON_SELECT) {
-            return CONTROL_ACTION_CPP_DISABLE;
+        if (!new3dsFlag){
+            if (pressed & BUTTON_SELECT) {
+                return CONTROL_ACTION_CPP_DISABLE;
+            }
         }
         #endif
-        return CONTROL_ACTION_NONE;
     }
-
-    // if (pressed & BUTTON_SELECT) {
-    //     return CONTROL_ACTION_ITEMS_MENU;
-    // }
-    // if (held & BUTTON_LEFT) {
-    //     return CONTROL_ACTION_ITEM_I;
-    // }
-    // if (held & BUTTON_DOWN) {
-    //     return CONTROL_ACTION_ITEM_II;
-    // }
-    // if (held & BUTTON_UP) {
-    //     return CONTROL_ACTION_NAVI;
-    // }
-    // if (held & BUTTON_RIGHT) {
-    //     return CONTROL_ACTION_OCARINA;
-    // }
     return CONTROL_ACTION_NONE;
 }
