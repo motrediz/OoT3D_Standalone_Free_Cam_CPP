@@ -16,6 +16,7 @@ typedef struct {
     u32 targetButton;
 } ButtonMap;
 
+#ifdef RSTICK
 // Injects additional button inputs into the game state.
 // Source buttons remain unchanged.
 // Used for injecting ZR, ZL and R (CPP only) into the game state.
@@ -50,9 +51,10 @@ static void InputRemap_InjectButtonMappings(GlobalContext* globalCtx, const Butt
     *gamePressed |= pressed;
     *gameReleased |= released;
 }
+#endif
 
 void InputRemap_Update(GlobalContext* globalCtx) {
-
+    #ifdef RSTICK
     static ButtonMap sButtonMaps[] = {
         { BUTTON_ZR, BUTTON_R1 },
         { BUTTON_ZL, BUTTON_L1 },
@@ -60,6 +62,7 @@ void InputRemap_Update(GlobalContext* globalCtx) {
     };
 
     InputRemap_InjectButtonMappings(globalCtx, sButtonMaps,sizeof(sButtonMaps) / sizeof(sButtonMaps[0]));
+    #endif
 
     const ControlAction action = Controls_Resolve(rInputCtx.cur.val,rInputCtx.pressed.val);
     switch (action) {
