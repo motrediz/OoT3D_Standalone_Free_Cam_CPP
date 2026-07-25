@@ -41,7 +41,7 @@ This project still lacks several features that may be added in the future.
 * Find the patch files inside the "[Patch Files](https://github.com/tristangnl/OoT3D_Standalone_Free_Cam_CPP/releases/download/CPP-ZR-ZL/Patch.Files.zip)" folder in this repository. They're divided by regional version of OoT3D (USA/EUR/JP) and by platform (3DS/Citra), so choose the correct ones.
 
 ##### 7 versions are available based on 3 features :
-- rightstick : Circle Pad Pro on old 3ds | C-Stick on new 3ds
+- rightstick : Circle Pad Pro + ZR/ZL/R on old 3ds | C-Stick + ZR/ZL on new 3ds
 - dpad
 - touchscreen
 
