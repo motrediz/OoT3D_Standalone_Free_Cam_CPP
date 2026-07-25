@@ -22,11 +22,11 @@ This project still lacks several features that may be added in the future.
 * Further version support (KOR/TWN)
 * Improved UI & retained settings
 * Improved collision checks
-* ZR/ZL/R support on CPP and c-stick
 * free camera when riding epona
 
 # Shoutouts
-* Shoutouts to [Skyfloogle](https://github.com/skyfloogle/red-viper/blob/master/source/3ds/cpp.c) that made Circle Pad Pro implementation possible. 
+* Shoutouts to [Skyfloogle](https://github.com/skyfloogle/red-viper/blob/master/source/3ds/cpp.c) that made Circle Pad Pro implementation possible.
+* Shoutout to [OTPR26](https://github.com/OTPR26/OOT3DHud)  for his ocarina reframed mod, whose input remapping code made implementing CPP and N3DS ZL/ZR support much easier.
 * Shoutouts to [Roberto Nessy](https://github.com/Roberto-Nessy) who is the original developer of this patch and who made the shoutouts below.
 * Shoutouts to [gamestabled](https://github.com/gamestabled) for creating the practice patch and randomizer projects this shamelessly steals from
   * By extension, shoutouts to anyone gamestabled shouts out in those projects
@@ -38,7 +38,7 @@ This project still lacks several features that may be added in the future.
 * Shoutouts to the whole OoT3DR dev team for being cool people and the community for keeping me motivated
 
 # How to Use:
-* Find the patch files inside the "[Patch Files](https://github.com/tristangnl/OoT3D_Standalone_Free_Cam_CPP/releases/download/CPP-DPAD-TOUCHSCREEN/Patch.Files.zip)" folder in this repository. They're divided by regional version of OoT3D (USA/EUR/JP) and by platform (3DS/Citra), so choose the correct ones.
+* Find the patch files inside the "[Patch Files](https://github.com/tristangnl/OoT3D_Standalone_Free_Cam_CPP/releases/download/CPP-ZR-ZL/Patch.Files.zip)" folder in this repository. They're divided by regional version of OoT3D (USA/EUR/JP) and by platform (3DS/Citra), so choose the correct ones.
 
 ##### 7 versions are available based on 3 features :
 - rightstick : Circle Pad Pro on old 3ds | C-Stick on new 3ds
@@ -71,8 +71,11 @@ The free camera's settings can be adjusted with the following button combination
 
 * **L + R + DPad Up/Down** = Increase/Decrease Sensitivity
 * **L + R + DPad Left/Right** = Invert Axes (Neither, Just X, Just Y, Both)
+* The selected setting will be displayed on the top screen in the upper left briefly after selecting it.
 
-The selected setting will be displayed on the top screen in the upper left briefly after selecting it.
+#### Only on "rightstick" version
+* **ZR** = R (Shield)
+* **ZL** = L (L-Targeting)
 
 #### With Circle Pad Pro
 
