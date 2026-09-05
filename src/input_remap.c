@@ -2,58 +2,28 @@
 #include "hid.h"
 #include "camera.h"
 #include "input.h"
-#include "3ds/svc.h"
 
 #define PLAY_PAD_BUTTONS_OFFSET          0x14
 #define PLAY_PAD_PRESSED_BUTTONS_OFFSET  0x18
 #define PLAY_PAD_RELEASED_BUTTONS_OFFSET 0x1C
 
-// Native Luma cheat proven working on this EUR build writes 20.0f to Link+0x222C.
-// The crucial difference from our previous attempts is timing: the native cheat engine
-// writes asynchronously, while our old code wrote once at a deterministic point in the
-// game update and OoT3D could overwrite the value before movement consumed it.
-#define FAST_MOVE_SPEED_OFFSET 0x222C
-#define FAST_MOVE_SPEED_VALUE  0x41A00000u
-#define FAST_MOVE_THREAD_STACK 0x400
-#define FAST_MOVE_SLEEP_NS     (1LL * 1000 * 1000) // 1 ms
+// IMPORTANT: this is the exact EUR address from the Luma/Gateshark cheat that
+// has already been proven to work on the user's console:
+//
+//   098F722C 41A00000
+//
+// In Gateshark, the leading 0 is the 32-bit-write code type. It is NOT part of
+// the address. Therefore the actual target address is 0x08F722C, not
+// 0x098F722C. Our very first implementation got this wrong; later attempts used
+// the USA plugin's Player+0x222C offset, which need not match the EUR Player
+// layout even though Player+0x77 still produced the visible jump.
+#define FAST_MOVE_EUR_ADDRESS 0x08F722Cu
+#define FAST_MOVE_VALUE       0x41A00000u
 
 typedef struct {
     u32 sourceButton;
     u32 targetButton;
 } ButtonMap;
-
-#if defined(RSTICK) && defined(Version_EUR)
-static volatile Player* gFastMovePlayer = 0;
-static volatile u32 gFastMoveZRHeld = 0;
-static Handle gFastMoveThreadHandle = 0;
-static u8 gFastMoveThreadStack[FAST_MOVE_THREAD_STACK] __attribute__((aligned(8)));
-static u8 gFastMoveThreadStarted = 0;
-
-static void FastMoveThread(void* arg) {
-    (void)arg;
-    for (;;) {
-        Player* player = (Player*)gFastMovePlayer;
-        if (gFastMoveZRHeld && player) {
-            *(volatile u32*)((volatile u8*)player + FAST_MOVE_SPEED_OFFSET) = FAST_MOVE_SPEED_VALUE;
-        }
-        svcSleepThread(FAST_MOVE_SLEEP_NS);
-    }
-}
-
-void InputRemap_StartFastMoveThread(void) {
-    if (gFastMoveThreadStarted) return;
-    if (svcCreateThread(&gFastMoveThreadHandle,
-                        FastMoveThread,
-                        0,
-                        (u32*)(gFastMoveThreadStack + sizeof(gFastMoveThreadStack)),
-                        0x28,
-                        -1) == 0) {
-        gFastMoveThreadStarted = 1;
-    }
-}
-#else
-void InputRemap_StartFastMoveThread(void) {}
-#endif
 
 #ifdef RSTICK
 static void InputRemap_InjectButtonMappings(GlobalContext* globalCtx, const ButtonMap* remaps, u32 count) {
@@ -86,6 +56,14 @@ static void InputRemap_InjectButtonMappings(GlobalContext* globalCtx, const Butt
 }
 #endif
 
+static inline void InputRemap_ApplyFastMove(void) {
+#if defined(RSTICK) && defined(Version_EUR)
+    if (rInputCtx.cur.val & BUTTON_ZR) {
+        *(volatile u32*)FAST_MOVE_EUR_ADDRESS = FAST_MOVE_VALUE;
+    }
+#endif
+}
+
 void InputRemap_Update(GlobalContext* globalCtx) {
 #ifdef RSTICK
     static ButtonMap sButtonMaps[] = {
@@ -99,12 +77,8 @@ void InputRemap_Update(GlobalContext* globalCtx) {
     InputRemap_InjectButtonMappings(globalCtx, sButtonMaps, sizeof(sButtonMaps) / sizeof(sButtonMaps[0]));
 #endif
 
-#if defined(RSTICK) && defined(Version_EUR)
-    // This hook is known-good for input because the original ZR->R mapping worked here.
-    // Publish only state to the asynchronous worker; do not write movement from the game thread.
-    gFastMovePlayer = globalCtx ? globalCtx->mainCamera.player : 0;
-    gFastMoveZRHeld = (rInputCtx.cur.val & BUTTON_ZR) ? 1u : 0u;
-#endif
+    // Stamp the exact known-good EUR cheat address before the game update.
+    InputRemap_ApplyFastMove();
 
     const ControlAction action = Controls_Resolve(rInputCtx.cur.val, rInputCtx.pressed.val);
     switch (action) {
@@ -124,4 +98,11 @@ void InputRemap_Update(GlobalContext* globalCtx) {
 
 void InputRemap_AfterUpdate(GlobalContext* globalCtx) {
     (void)globalCtx;
+    // Stamp it again after the game update. This mirrors the continuously-
+    // applied nature of a Luma cheat without introducing a separate thread.
+    InputRemap_ApplyFastMove();
+}
+
+void InputRemap_StartFastMoveThread(void) {
+    // Kept as a no-op so older call sites/build artifacts remain source-compatible.
 }
