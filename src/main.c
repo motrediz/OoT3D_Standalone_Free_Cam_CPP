@@ -35,5 +35,7 @@ void before_GlobalContext_Update(GlobalContext* globalCtx) {
 }
 
 void after_GlobalContext_Update(GlobalContext* globalCtx) {
+    // Apply ZR Fast Move after OoT3D has finished updating Link's movement.
+    InputRemap_AfterUpdate(globalCtx);
     displayHUD();
 }
