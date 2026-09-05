@@ -2,22 +2,58 @@
 #include "hid.h"
 #include "camera.h"
 #include "input.h"
+#include "3ds/svc.h"
 
-// OoT3D's GameState owns a sampled controller state beginning at offset 0x14.
 #define PLAY_PAD_BUTTONS_OFFSET          0x14
 #define PLAY_PAD_PRESSED_BUTTONS_OFFSET  0x18
 #define PLAY_PAD_RELEASED_BUTTONS_OFFSET 0x1C
 
-// Fast Move offsets copied from Nanquitas' original OoT3D CTRPF plugin and
-// OcarinaCTRComposer. Both operate on the live Player actor.
-#define FAST_MOVE_JUMP_OFFSET  0x77
+// Native Luma cheat proven working on this EUR build writes 20.0f to Link+0x222C.
+// The crucial difference from our previous attempts is timing: the native cheat engine
+// writes asynchronously, while our old code wrote once at a deterministic point in the
+// game update and OoT3D could overwrite the value before movement consumed it.
 #define FAST_MOVE_SPEED_OFFSET 0x222C
 #define FAST_MOVE_SPEED_VALUE  0x41A00000u
+#define FAST_MOVE_THREAD_STACK 0x400
+#define FAST_MOVE_SLEEP_NS     (1LL * 1000 * 1000) // 1 ms
 
 typedef struct {
     u32 sourceButton;
     u32 targetButton;
 } ButtonMap;
+
+#if defined(RSTICK) && defined(Version_EUR)
+static volatile Player* gFastMovePlayer = 0;
+static volatile u32 gFastMoveZRHeld = 0;
+static Handle gFastMoveThreadHandle = 0;
+static u8 gFastMoveThreadStack[FAST_MOVE_THREAD_STACK] __attribute__((aligned(8)));
+static u8 gFastMoveThreadStarted = 0;
+
+static void FastMoveThread(void* arg) {
+    (void)arg;
+    for (;;) {
+        Player* player = (Player*)gFastMovePlayer;
+        if (gFastMoveZRHeld && player) {
+            *(volatile u32*)((volatile u8*)player + FAST_MOVE_SPEED_OFFSET) = FAST_MOVE_SPEED_VALUE;
+        }
+        svcSleepThread(FAST_MOVE_SLEEP_NS);
+    }
+}
+
+void InputRemap_StartFastMoveThread(void) {
+    if (gFastMoveThreadStarted) return;
+    if (R_SUCCEEDED(svcCreateThread(&gFastMoveThreadHandle,
+                                    FastMoveThread,
+                                    0,
+                                    (u32*)(gFastMoveThreadStack + sizeof(gFastMoveThreadStack)),
+                                    0x28,
+                                    -1))) {
+        gFastMoveThreadStarted = 1;
+    }
+}
+#else
+void InputRemap_StartFastMoveThread(void) {}
+#endif
 
 #ifdef RSTICK
 static void InputRemap_InjectButtonMappings(GlobalContext* globalCtx, const ButtonMap* remaps, u32 count) {
@@ -50,40 +86,6 @@ static void InputRemap_InjectButtonMappings(GlobalContext* globalCtx, const Butt
 }
 #endif
 
-static void InputRemap_ApplyFastMove(GlobalContext* globalCtx) {
-#if defined(RSTICK) && defined(Version_EUR)
-    static u32 heldFrames = 0;
-
-    const int zrHeld = (rInputCtx.cur.val & BUTTON_ZR) != 0;
-    Player* const player = globalCtx->mainCamera.player;
-
-    // Important: do NOT gate this on CPAD_ANY. CTRPF's Key::CPad is not the
-    // same thing as the raw HID direction bits used by this patch; those bits
-    // can flicker around the analogue threshold and were resetting the frame
-    // counter before Fast Move reached its speed-write phase.
-    if (!zrHeld || !player) {
-        heldFrames = 0;
-        return;
-    }
-
-    volatile u8* const p = (volatile u8*)player;
-
-    if (heldFrames < 3) {
-        // Reproduce the original plugin's tiny launch phase. 0x77 is odd, so
-        // write the little-endian halfword byte-by-byte.
-        p[FAST_MOVE_JUMP_OFFSET] = 0x40;
-        p[FAST_MOVE_JUMP_OFFSET + 1] = 0xCB;
-        heldFrames++;
-    } else {
-        // Once ZR has been held for 3 update calls, continuously stamp the
-        // original Fast Move value into Link's movement field.
-        *(volatile u32*)(p + FAST_MOVE_SPEED_OFFSET) = FAST_MOVE_SPEED_VALUE;
-    }
-#else
-    (void)globalCtx;
-#endif
-}
-
 void InputRemap_Update(GlobalContext* globalCtx) {
 #ifdef RSTICK
     static ButtonMap sButtonMaps[] = {
@@ -95,6 +97,13 @@ void InputRemap_Update(GlobalContext* globalCtx) {
     };
 
     InputRemap_InjectButtonMappings(globalCtx, sButtonMaps, sizeof(sButtonMaps) / sizeof(sButtonMaps[0]));
+#endif
+
+#if defined(RSTICK) && defined(Version_EUR)
+    // This hook is known-good for input because the original ZR->R mapping worked here.
+    // Publish only state to the asynchronous worker; do not write movement from the game thread.
+    gFastMovePlayer = globalCtx ? globalCtx->mainCamera.player : 0;
+    gFastMoveZRHeld = (rInputCtx.cur.val & BUTTON_ZR) ? 1u : 0u;
 #endif
 
     const ControlAction action = Controls_Resolve(rInputCtx.cur.val, rInputCtx.pressed.val);
@@ -114,5 +123,5 @@ void InputRemap_Update(GlobalContext* globalCtx) {
 }
 
 void InputRemap_AfterUpdate(GlobalContext* globalCtx) {
-    InputRemap_ApplyFastMove(globalCtx);
+    (void)globalCtx;
 }
