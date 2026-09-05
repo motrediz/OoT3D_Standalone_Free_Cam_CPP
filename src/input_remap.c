@@ -12,8 +12,6 @@
 #define PLAY_PAD_RELEASED_BUTTONS_OFFSET 0x1C
 
 // EUR OoT3D address confirmed working with the existing Luma/Gateshark fast-move code.
-// 0x41A00000 is 20.0f and is written only while ZR is held; the game resumes
-// updating movement normally as soon as ZR is released.
 #ifdef Version_EUR
 #define FAST_MOVE_EUR_ADDRESS 0x098F722Cu
 #define FAST_MOVE_VALUE       0x41A00000u
@@ -42,8 +40,6 @@ static void InputRemap_InjectButtonMappings(GlobalContext* globalCtx, const Butt
 
         if (rInputCtx.cur.val & src) {
             held |= tgt;
-            // Only signals a "new press" if the source button has itself just transitioned to pressed,
-            // and the target is not already physically held by the player to avoid a double signal.
             if ((rInputCtx.pressed.val & src) && !(realHeld & tgt)) {
                 pressed |= tgt;
             }
@@ -53,7 +49,7 @@ static void InputRemap_InjectButtonMappings(GlobalContext* globalCtx, const Butt
             }
         }
     }
-    // Write to the game state in memory, not to HID, since HID is read-only.
+
     *gameHeld |= held;
     *gamePressed |= pressed;
     *gameReleased |= released;
@@ -71,13 +67,6 @@ void InputRemap_Update(GlobalContext* globalCtx) {
     };
 
     InputRemap_InjectButtonMappings(globalCtx, sButtonMaps, sizeof(sButtonMaps) / sizeof(sButtonMaps[0]));
-
-    #ifdef Version_EUR
-    // On the EUR New 3DS build, ZR is dedicated to Fast Move instead of mirroring R.
-    if (rInputCtx.cur.val & BUTTON_ZR) {
-        *(volatile u32*)FAST_MOVE_EUR_ADDRESS = FAST_MOVE_VALUE;
-    }
-    #endif
     #endif
 
     const ControlAction action = Controls_Resolve(rInputCtx.cur.val, rInputCtx.pressed.val);
@@ -94,4 +83,16 @@ void InputRemap_Update(GlobalContext* globalCtx) {
         case CONTROL_ACTION_NONE:
             break;
     }
+}
+
+void InputRemap_AfterUpdate(GlobalContext* globalCtx) {
+    (void)globalCtx;
+
+    #if defined(RSTICK) && defined(Version_EUR)
+    // OoT3D rewrites Link's movement value during its normal update, so apply
+    // the known-good fast-move value after the game's update for the next frame.
+    if (rInputCtx.cur.val & BUTTON_ZR) {
+        *(volatile u32*)FAST_MOVE_EUR_ADDRESS = FAST_MOVE_VALUE;
+    }
+    #endif
 }
