@@ -42,12 +42,12 @@ static void FastMoveThread(void* arg) {
 
 void InputRemap_StartFastMoveThread(void) {
     if (gFastMoveThreadStarted) return;
-    if (R_SUCCEEDED(svcCreateThread(&gFastMoveThreadHandle,
-                                    FastMoveThread,
-                                    0,
-                                    (u32*)(gFastMoveThreadStack + sizeof(gFastMoveThreadStack)),
-                                    0x28,
-                                    -1))) {
+    if (svcCreateThread(&gFastMoveThreadHandle,
+                        FastMoveThread,
+                        0,
+                        (u32*)(gFastMoveThreadStack + sizeof(gFastMoveThreadStack)),
+                        0x28,
+                        -1) == 0) {
         gFastMoveThreadStarted = 1;
     }
 }
