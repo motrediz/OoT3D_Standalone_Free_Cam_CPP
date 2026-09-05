@@ -33,7 +33,9 @@ jobs:
           ELF="$(find . -maxdepth 1 -name '*.elf' -print -quit)"
           test -n "$ELF"
 
-          MAILBOX_HEX="$(arm-none-eabi-nm -n "$ELF" | awk '$3 == "gZRMailbox" { print $1; exit }')"
+          NM="$DEVKITARM/bin/arm-none-eabi-nm"
+          test -x "$NM"
+          MAILBOX_HEX="$($NM -n "$ELF" | awk '$3 == "gZRMailbox" { print $1; exit }')"
           test -n "$MAILBOX_HEX"
 
           MAILBOX_DEC=$((16#$MAILBOX_HEX))
