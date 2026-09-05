@@ -1,0 +1,40 @@
+name: Build EUR ZR Fast Move
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - 'src/**'
+      - 'include/**'
+      - 'Makefile'
+      - 'patch.py'
+      - 'oot_e.ld'
+      - '.github/workflows/build-zr-fast.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitarm:latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build EUR rightstick patch
+        shell: bash
+        run: |
+          make clean
+          make -j2 REGION=EUR rstick=1
+          test -f code.ips
+          mkdir -p artifact
+          cp code.ips artifact/code.ips
+          cp 'Patch Files/EUR/3DS/exheader.bin' artifact/exheader.bin
+
+      - name: Upload patch
+        uses: actions/upload-artifact@v4
+        with:
+          name: OoT3D-EUR-FreeCam-ZR-FastMove
+          path: artifact/
+          if-no-files-found: error
