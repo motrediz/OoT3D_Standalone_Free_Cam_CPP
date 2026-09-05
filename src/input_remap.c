@@ -7,18 +7,15 @@
 #define PLAY_PAD_PRESSED_BUTTONS_OFFSET  0x18
 #define PLAY_PAD_RELEASED_BUTTONS_OFFSET 0x1C
 
-// IMPORTANT: this is the exact EUR address from the Luma/Gateshark cheat that
-// has already been proven to work on the user's console:
-//
-//   098F722C 41A00000
-//
-// In Gateshark, the leading 0 is the 32-bit-write code type. It is NOT part of
-// the address. Therefore the actual target address is 0x08F722C, not
-// 0x098F722C. Our very first implementation got this wrong; later attempts used
-// the USA plugin's Player+0x222C offset, which need not match the EUR Player
-// layout even though Player+0x77 still produced the visible jump.
-#define FAST_MOVE_EUR_ADDRESS 0x08F722Cu
-#define FAST_MOVE_VALUE       0x41A00000u
+// Mailbox value read by Luma's native cheat engine.
+// This lives inside the patch's own linked data region, so we don't have to
+// guess a free game RAM address or touch Link's movement structures directly.
+#define ZR_MAILBOX_MAGIC_ON  0x5A525A52u  // "ZRZR"
+#define ZR_MAILBOX_MAGIC_OFF 0x5A524F46u  // "ZROF"
+
+// Deliberately non-static so the build workflow can resolve the exact linked
+// address with arm-none-eabi-nm and generate the matching cheats.txt snippet.
+volatile u32 gZRMailbox __attribute__((used, section(".data"))) = ZR_MAILBOX_MAGIC_OFF;
 
 typedef struct {
     u32 sourceButton;
@@ -56,14 +53,6 @@ static void InputRemap_InjectButtonMappings(GlobalContext* globalCtx, const Butt
 }
 #endif
 
-static inline void InputRemap_ApplyFastMove(void) {
-#if defined(RSTICK) && defined(Version_EUR)
-    if (rInputCtx.cur.val & BUTTON_ZR) {
-        *(volatile u32*)FAST_MOVE_EUR_ADDRESS = FAST_MOVE_VALUE;
-    }
-#endif
-}
-
 void InputRemap_Update(GlobalContext* globalCtx) {
 #ifdef RSTICK
     static ButtonMap sButtonMaps[] = {
@@ -77,8 +66,12 @@ void InputRemap_Update(GlobalContext* globalCtx) {
     InputRemap_InjectButtonMappings(globalCtx, sButtonMaps, sizeof(sButtonMaps) / sizeof(sButtonMaps[0]));
 #endif
 
-    // Stamp the exact known-good EUR cheat address before the game update.
-    InputRemap_ApplyFastMove();
+#if defined(RSTICK) && defined(Version_EUR)
+    // ZR does not write movement memory anymore. It only flips our private
+    // mailbox; Luma's native cheat engine performs the already-proven Fast Move
+    // write when this mailbox contains ZR_MAILBOX_MAGIC_ON.
+    gZRMailbox = (rInputCtx.cur.val & BUTTON_ZR) ? ZR_MAILBOX_MAGIC_ON : ZR_MAILBOX_MAGIC_OFF;
+#endif
 
     const ControlAction action = Controls_Resolve(rInputCtx.cur.val, rInputCtx.pressed.val);
     switch (action) {
@@ -98,11 +91,8 @@ void InputRemap_Update(GlobalContext* globalCtx) {
 
 void InputRemap_AfterUpdate(GlobalContext* globalCtx) {
     (void)globalCtx;
-    // Stamp it again after the game update. This mirrors the continuously-
-    // applied nature of a Luma cheat without introducing a separate thread.
-    InputRemap_ApplyFastMove();
 }
 
 void InputRemap_StartFastMoveThread(void) {
-    // Kept as a no-op so older call sites/build artifacts remain source-compatible.
+    // Compatibility no-op. No worker thread is used by the mailbox design.
 }
