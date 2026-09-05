@@ -1,0 +1,121 @@
+name: Build OcarinaCTRComposer ZR Fast Move
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ master ]
+    paths:
+      - '.github/workflows/build-ocarina-zr-plugin.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: devkitpro/devkitarm:latest
+
+    steps:
+      - name: Checkout helper repo
+        uses: actions/checkout@v4
+
+      - name: Install host build tools
+        shell: bash
+        run: |
+          pacman -Sy --noconfirm --needed git cmake gcc make python
+
+      - name: Clone OcarinaCTRComposer
+        shell: bash
+        run: |
+          git clone --depth 1 https://github.com/samaBR85/OcarinaCTRComposer.git /tmp/OcarinaCTRComposer
+
+      - name: Patch plugin for New 3DS ZR Fast Move
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path('/tmp/OcarinaCTRComposer/RawPlugin')
+          main = root / 'sources/main.c'
+          cheats = root / 'sources/plugin/cheats.inc.c'
+          common = root / 'includes/common.h'
+
+          s = common.read_text()
+          s = s.replace('#define BUTTON_ZL         (1 << 13)  // New 3DS only - NOT in the 0x10146000 register; via ir:rst/CPP\n#define BUTTON_ZR         (1 << 14)',
+                        '#define BUTTON_ZL         (1 << 14)  // New 3DS ir:rst bit\n#define BUTTON_ZR         (1 << 15)  // New 3DS ir:rst bit')
+          common.write_text(s)
+
+          s = main.read_text()
+          marker = '#include "themes.h"\n\n'
+          assert marker in s
+          s = s.replace(marker, marker + '// Extended New 3DS keys sampled through ir:rst.\nstatic u32 gN3dsPad = 0;\n\n', 1)
+
+          marker = '    InitThreadVars(); // must run before any newlib/hid/fs call on this thread\n'
+          assert marker in s
+          s = s.replace(marker, marker + '    Result zrInitResult = irrstInit();\n    const int zrReady = R_SUCCEEDED(zrInitResult);\n', 1)
+
+          old = '        u32 pad = HID_PAD, down = ARepeat(pad, &prev, &g_arHold);\n'
+          new = ('        if (zrReady) {\n'
+                 '            irrstScanInput();\n'
+                 '            gN3dsPad = irrstKeysHeld();\n'
+                 '        } else {\n'
+                 '            gN3dsPad = 0;\n'
+                 '        }\n'
+                 '        u32 pad = HID_PAD | gN3dsPad, down = ARepeat(pad, &prev, &g_arHold);\n')
+          assert old in s
+          s = s.replace(old, new, 1)
+          main.write_text(s)
+
+          s = cheats.read_text()
+          old = '    u32 pad = HID_PAD;\n\n    // --- Movement ---\n'
+          new = ('    u32 pad = HID_PAD | gN3dsPad;\n\n'
+                 '    // ZR Fast Move: use the exact same process address/value as the\n'
+                 '    // already-proven Luma Gateshark cheat, but apply it from this\n'
+                 '    // plugin thread (asynchronously from the game update).\n'
+                 '    if (pad & BUTTON_ZR) W32(0x098F722C, 0x41A00000);\n\n'
+                 '    // --- Movement ---\n')
+          assert old in s
+          s = s.replace(old, new, 1)
+          cheats.write_text(s)
+          PY
+
+      - name: Build 3gxtool 1.3
+        shell: bash
+        run: |
+          git clone --depth 1 --branch v1.3 --recurse-submodules https://gitlab.com/thepixellizeross/3gxtool.git /tmp/3gxtool
+          cmake -S /tmp/3gxtool -B /tmp/3gxtool/build -DCMAKE_BUILD_TYPE=Release
+          cmake --build /tmp/3gxtool/build -j2
+          TOOL="$(find /tmp/3gxtool/build -type f -name 3gxtool -perm -111 -print -quit)"
+          test -n "$TOOL"
+          cp "$TOOL" /usr/local/bin/3gxtool
+          3gxtool --help >/dev/null
+
+      - name: Build modified plugin
+        shell: bash
+        run: |
+          cd /tmp/OcarinaCTRComposer/RawPlugin
+          make clean
+          make -j2
+          test -f RawPlugin.3gx
+          mkdir -p "$GITHUB_WORKSPACE/artifact"
+          cp RawPlugin.3gx "$GITHUB_WORKSPACE/artifact/OcarinaCTRComposer-ZR-FastMove.3gx"
+          cat > "$GITHUB_WORKSPACE/artifact/README.txt" <<'EOF'
+          Custom OcarinaCTRComposer build for New 3DS.
+
+          ZR is read through ir:rst and, while held, the plugin continuously writes:
+              0x098F722C = 0x41A00000
+          from the plugin worker thread.
+
+          This is the same process address/value as the Luma cheat already verified on the EUR game.
+
+          Install as:
+          /luma/plugins/0004000000033600/OcarinaCTRComposer.3gx
+
+          Keep the normal EUR Free Camera code.ips/exheader.bin. Do NOT use the experimental mailbox/fast-move code.ips.
+          The old cheats.txt Fast Move entry is not required for ZR in this build.
+          EOF
+
+      - name: Upload plugin
+        uses: actions/upload-artifact@v4
+        with:
+          name: OcarinaCTRComposer-EUR-ZR-FastMove
+          path: artifact/
+          if-no-files-found: error
