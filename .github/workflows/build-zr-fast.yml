@@ -22,19 +22,57 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build EUR rightstick patch
+      - name: Build EUR rightstick patch and mailbox cheat
         shell: bash
         run: |
+          set -euo pipefail
           make clean
           make -j2 REGION=EUR rstick=1
           test -f code.ips
+
+          ELF="$(find . -maxdepth 1 -name '*.elf' -print -quit)"
+          test -n "$ELF"
+
+          MAILBOX_HEX="$(arm-none-eabi-nm -n "$ELF" | awk '$3 == "gZRMailbox" { print $1; exit }')"
+          test -n "$MAILBOX_HEX"
+
+          MAILBOX_DEC=$((16#$MAILBOX_HEX))
+          if (( MAILBOX_DEC > 0x0FFFFFFF )); then
+            echo "Mailbox address is outside Gateshark's 28-bit address field: 0x$MAILBOX_HEX" >&2
+            exit 1
+          fi
+
+          printf -v MAILBOX7 '%07X' "$MAILBOX_DEC"
+          echo "gZRMailbox = 0x$MAILBOX_HEX"
+
           mkdir -p artifact
           cp code.ips artifact/code.ips
           cp 'Patch Files/EUR/3DS/exheader.bin' artifact/exheader.bin
 
+          cat > artifact/ZR-FastMove-cheat-snippet.txt <<EOF
+          [ZR Fast Move - FreeCam bridge]
+          5${MAILBOX7} 5A525A52
+          098F722C 41A00000
+          D2000000 00000000
+          EOF
+
+          cat > artifact/README-ZR-FastMove.txt <<EOF
+          EUR Title ID: 0004000000033600
+          gZRMailbox: 0x${MAILBOX_HEX}
+
+          Install code.ips (and exheader.bin if needed) in:
+          /luma/titles/0004000000033600/
+
+          Append the contents of ZR-FastMove-cheat-snippet.txt to your existing cheats.txt.
+          Enable "ZR Fast Move - FreeCam bridge" in Rosalina > Cheats.
+
+          The patch only writes its own mailbox value when ZR is held.
+          Luma performs the known-working 098F722C 41A00000 Fast Move write.
+          EOF
+
       - name: Upload patch
         uses: actions/upload-artifact@v4
         with:
-          name: OoT3D-EUR-FreeCam-ZR-FastMove
+          name: OoT3D-EUR-FreeCam-ZR-FastMove-Bridge
           path: artifact/
           if-no-files-found: error
