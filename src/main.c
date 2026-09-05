@@ -22,6 +22,7 @@ static void Free_Camera_Init(void) {
         else cppInit();
         #endif
         Draw_SetupFramebuffer();
+        InputRemap_StartFastMoveThread();
         initialized = 1;
     }
 }
@@ -35,7 +36,6 @@ void before_GlobalContext_Update(GlobalContext* globalCtx) {
 }
 
 void after_GlobalContext_Update(GlobalContext* globalCtx) {
-    // Apply ZR Fast Move after OoT3D has finished updating Link's movement.
     InputRemap_AfterUpdate(globalCtx);
     displayHUD();
 }
